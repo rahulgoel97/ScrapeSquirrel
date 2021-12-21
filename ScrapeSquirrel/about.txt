@@ -1,0 +1,22 @@
+Squirrels store their nuts, like we store our scraped data...
+
+The objective of this project is to simplify the scraping and storing of data in an SQL database - through which one may build an API for a webapp, or use in a myriad of different ways.
+
+On a high level, the method works as follows:
+
+1. Create an SQL database - init database
+2. Scrape some data and store as a pandas df
+3. Remove duplicates
+4. Store as a pickle
+5. Insert into SQL for the first time
+6. When new data is pulled in, store into pandas df
+7. Append to prior df, retrieved from the pickle
+8. Remove duplicates
+9. Overwrite pickle
+10. Add to SQL
+11. Repeat
+
+This can make it simple to store data without worrying too much about SQL and duplicates.
+
+Flow:
+Data -> SquirrelScrape -> Unique values stored in SQL. 

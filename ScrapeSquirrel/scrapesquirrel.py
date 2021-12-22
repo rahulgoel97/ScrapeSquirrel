@@ -59,10 +59,7 @@ class ScrapeSquirrel():
             
             # Access the dataframe provided
             df = self.df
-            df = df.drop_duplicates() # Bye, bye dups!!!
-
-            # DEBUG - ----!!!!!!!!!!!!!!!!
-            print("Dropped dups")
+            df = df.drop_duplicates() # Bye, bye dups!!
             
             # Save as pickle with matching name
             pickle_name = str(self.db_name)+".pkl"
@@ -70,36 +67,62 @@ class ScrapeSquirrel():
 
             # Build the SQL querty
             col_names = df.columns # Columns required
-            sql_query = "'''CREATE TABLE data_table ("
+            sql_query = '''CREATE TABLE SCRAPEDINFO ('''
             
             # Add all the colmns as TEXT
-            for col_name in col_names:
-                sql_query = sql_query+f"{col_name} TEXT,\n"
-            
-            # Close out the querty
-            sql_query = sql_query+");'''"
-            
-            # DEBUG!!!!!!!!!!!!!!!!!! ======++++++ %%%%%
+            for idx, col_name in enumerate(col_names):
+                total_columns = len(col_names)
+                total_column_indices = total_columns-1
+    
+                if(idx!=total_column_indices):
+                    sql_query = sql_query+f'''\n\t{col_name} TEXT,'''
+                else:
+                    sql_query = sql_query+f'''\n\t{col_name} TEXT''' # no comma
 
-            print(sql_query)
+            # Close out the querty
+            sql_query = sql_query+'''\n);'''
+            
             
             # Now, execute the SQL query
             
             c.execute(sql_query)
+            
+            # Add the pickle info
+            df.to_sql('SCRAPEDINFO', conn, if_exists="replace", index=False)
 
             # Table created successfully
-            print("Successfully created SQL database with table data_table")
-        except:
-            print("Error - couldn't create SQL database")
+            print("Successfully created SQL database with table SCRAPEDINFO")
+        except Exception as e:
+            print("Error - couldn't create SQL database: ", e)
 
 
     # Helper function to pickle and save
     def pickle_and_save(self):
-        print(f"Save the pickle as {self.db_name}.pkl and insert to {self.db_name}.db")
+        
+        print(f"Detected {self.db_name}.db to be updated")
 
-df = pd.DataFrame()
-df['Name'] = ['Rahul', 'bigOther', 'Verve']
-df['Sig'] = ['RealName', 'djName', 'idkman']
 
-sqrl = ScrapeSquirrel(df=df, db_name="db_info")
-sqrl.store()
+        # Retrieve the old dataframe and append to create unified source
+        pickle_name = str(self.db_name)+'.pkl'
+        df_old = pd.read_pickle(pickle_name)
+    
+        # Add the new data to the older pickle file
+        new_df = df_old.append(self.df)
+        new_df = new_df.drop_duplicates() # This is the new df with no dups
+        
+        # Overwrite the older pickle file
+        new_df.to_pickle(pickle_name)
+
+        # Open up SQL database
+        db_path = str(self.db_name)+'.db'
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+
+        # Replace the data with the uniques
+        new_df.to_sql('SCRAPEDINFO', conn, if_exists="replace", index=False)
+
+        # Output a success message
+
+        print(f"Successfully updated the SQL database.")
+
+

@@ -1,0 +1,25 @@
+Detailed workflow
+
+- User imports ScrapeSquirrel
+- User has a dataframe
+- User invokes Squirrel(df, db_name):
+- User invokes Squirrel.store()
+
+--> If there is no SQL database:
+    --> Create SQL database db_name.db with columns mapped to df columns
+    --> Create the pickle file - df.pkl
+
+--> If there is already a database
+    --> Read in df.pkl as df_tmp
+    --> Attempt to append the data
+        --> If error, such as different columns, explicitly throw the error
+        --> Maybe the user had the wrong db_name? Check if there is a DB with matching columns (??)
+    --> If successful, delete duplicates
+    --> Overwrite the pickle file - df.pkl
+    --> Overwrite SQL database with the latest data
+
+--> Print a sweet, sweet message!
+
+- Done. Word up!
+
+

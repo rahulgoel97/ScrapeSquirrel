@@ -8,13 +8,16 @@ from os.path import exists
 class ScrapeSquirrel():
     
     # Constructor
-    def __init__(self, df, db_name):
+    def __init__(self, df, db_name, table_name):
         
         # The pandas dataframe 
         self.df = df
 
         # String of database name
         self.db_name = str(db_name) 
+
+        # Table nname
+        self.table_name = str(table_name)
     
     # User facing function to invoke
     def store(self, remove_duplicates=True):
@@ -48,7 +51,15 @@ class ScrapeSquirrel():
     
     # Helper function to create SQL dataabse
     def create_sql(self):
-        print(f"Trying to creating SQL db with name {self.db_name}.db")
+
+        # Variables
+
+        db_name = self.db_name
+        table_name = self.table_name
+
+        # Message to user
+
+        print(f"Trying to creating SQL db with name {db_name}_{table_name}.db")
         
         # Create the database
         db_full_name = str(self.db_name)+'.db'
@@ -62,12 +73,12 @@ class ScrapeSquirrel():
             df = df.drop_duplicates() # Bye, bye dups!!
             
             # Save as pickle with matching name
-            pickle_name = str(self.db_name)+".pkl"
+            pickle_name = str(self.db_name)+"_"+str(self.table_name)+".pkl"
             df.to_pickle(pickle_name)
 
             # Build the SQL querty
             col_names = df.columns # Columns required
-            sql_query = '''CREATE TABLE SCRAPEDINFO ('''
+            sql_query = f'''CREATE TABLE {table_name} ('''
             
             # Add all the colmns as TEXT
             for idx, col_name in enumerate(col_names):
@@ -88,30 +99,51 @@ class ScrapeSquirrel():
             c.execute(sql_query)
             
             # Add the pickle info
-            df.to_sql('SCRAPEDINFO', conn, if_exists="replace", index=False)
+            df.to_sql(str(self.table_name), conn, if_exists="replace", index=False)
 
             # Table created successfully
-            print("Successfully created SQL database with table SCRAPEDINFO")
+            print(f"Successfully created SQL database {db_full_name} with table {table_name}")
         except Exception as e:
             print("Error - couldn't create SQL database: ", e)
 
 
     # Helper function to pickle and save
     def pickle_and_save(self):
+
+        # Variables
+        table_name = self.table_name
+        db_name = self.db_name
         
-        print(f"Detected {self.db_name}.db to be updated")
+        print(f"Detected {db_name}.db to be updated")
 
 
         # Retrieve the old dataframe and append to create unified source
-        pickle_name = str(self.db_name)+'.pkl'
-        df_old = pd.read_pickle(pickle_name)
-    
-        # Add the new data to the older pickle file
-        new_df = df_old.append(self.df)
-        new_df = new_df.drop_duplicates() # This is the new df with no dups
+        pickle_name = str(self.db_name)+"_"+str(self.table_name)+'.pkl'
         
-        # Overwrite the older pickle file
-        new_df.to_pickle(pickle_name)
+        try: # Assuming this is already a table
+            
+            df_old = pd.read_pickle(pickle_name)
+            print(f"Existing table {table_name} detected")
+    
+            # Add the new data to the older pickle file
+            new_df = df_old.append(self.df)
+            
+            
+            # Overwrite the older pickle file
+            new_df.to_pickle(pickle_name)
+
+            new_df = new_df.drop_duplicates() # This is the new df with no dups
+
+        except: # New Table
+            print(f"Creating a new table {table_name}...")
+
+            new_df = self.df
+
+            # Save as pickle with matching name
+            pickle_name = str(self.db_name)+"_"+str(self.table_name)+".pkl"
+            new_df.to_pickle(pickle_name)
+
+            new_df = new_df.drop_duplicates() # This is the new df with no dups
 
         # Open up SQL database
         db_path = str(self.db_name)+'.db'
@@ -119,7 +151,7 @@ class ScrapeSquirrel():
         c = conn.cursor()
 
         # Replace the data with the uniques
-        new_df.to_sql('SCRAPEDINFO', conn, if_exists="replace", index=False)
+        new_df.to_sql(self.table_name, conn, if_exists="replace", index=False)
 
         # Output a success message
 
